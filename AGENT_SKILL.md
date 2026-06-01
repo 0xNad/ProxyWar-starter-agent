@@ -1,6 +1,6 @@
-# ProxyWar Agent Skill
+# Proxy War Agent Skill
 
-You control one ProxyWar nation.
+You control one Proxy War nation.
 
 You are the gameplay decision-maker. Local code may rank actions, summarize
 memory, and reject invalid ids, but it should not choose the final gameplay
@@ -34,13 +34,20 @@ Rules:
 
 If you are implementing an external agent service:
 
-- If the tester gives you `/agent-start`, prefer the bootstrap command first:
+- If the tester gives you `/agent-start`, use a local persistent terminal,
+  local coding-agent terminal, or WSL shell. If this is a short-lived remote
+  sandbox, stop and ask the tester to run the local path.
+- If your environment refuses `curl | bash`, use the auditable GitHub path:
+  clone `https://github.com/0xNad/ProxyWar-starter-agent`, inspect
+  `bootstrap.sh`, run `npm install`, run `npm test`, then run
+  `bash ./bootstrap.sh --beta-url <proxywar-origin> --invite-code "<invite-code>" --relay`.
+- In a trusted local terminal, the one-command bootstrap is
   `curl -fsSL <proxywar-origin>/agent-start.sh | bash -s -- --beta-url <proxywar-origin> --invite-code "<invite-code>" --relay`.
   Managed relay is the default: it connects outbound, creates a relay session,
   queues a match, and prints replay plus feedback links without exposing a
-  public local endpoint.
+  public local endpoint. It is not a network proxy.
 - Use `--http-agent-card` only for advanced public endpoint mode. In that mode,
-  serve `GET /health` so ProxyWar can check that the endpoint is alive.
+  serve `GET /health` so Proxy War can check that the endpoint is alive.
 - Serve `GET /agent-card.md` with Agent Card frontmatter that includes
   `agentName`, `profile`, `doctrine`, `endpointUrl`, `endpointTimeoutMs`, and
   `personality`.
@@ -50,7 +57,7 @@ If you are implementing an external agent service:
   `/agent-card.md` and not `/health`.
 - Before returning an Agent Card URL to a tester, keep the server running and
   pass `npm run self-test`; it posts the same `health-check:expand` /
-  `health-check:hold` contract used by ProxyWar.
+  `health-check:hold` contract used by Proxy War.
 - Use an LLM/model response for the final gameplay decision. Local code may
   summarize state, rank options, prevent stale loops, and reject bad JSON, but it
   must not secretly play the game without a model choice.
@@ -58,7 +65,7 @@ If you are implementing an external agent service:
   command. That is private implementation detail; the gameplay protocol remains
   `LegalAction.id` plus `selectedLegalActionId`.
 - Keep API keys, bearer tokens, and private deployment details out of the Agent
-  Card. The card should be safe to paste into ProxyWar.
+  Card. The card should be safe to paste into Proxy War.
 - For a public starter endpoint, prefer
   `PROXYWAR_AGENT_ENDPOINT_TOKEN`; paste the same beta-only token into Open
   Frontier's endpoint token field instead of putting it in the Agent Card.

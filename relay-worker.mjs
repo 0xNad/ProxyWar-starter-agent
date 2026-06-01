@@ -40,7 +40,7 @@ for (const signal of ["SIGINT", "SIGTERM"]) {
   });
 }
 
-console.log(`ProxyWar relay worker connected to ${betaUrl}`);
+console.log(`Proxy War relay worker connected to ${betaUrl}`);
 console.log("Waiting for outbound decision requests. Press Ctrl-C to stop.");
 
 while (!stopping) {
@@ -56,7 +56,7 @@ while (!stopping) {
   try {
     const decision = await agent.decide(poll.request);
     if (decision === null) {
-      throw new Error("No legal actions were offered by ProxyWar.");
+      throw new Error("No legal actions were offered by Proxy War.");
     }
     await relayFetch(decisionsUrl, {
       method: "POST",
@@ -97,7 +97,7 @@ async function runSelfTest() {
       `Relay self-test failed: ${parsed.error ?? "invalid decision"}`,
     );
   }
-  console.log("ProxyWar relay worker self-test passed.");
+  console.log("Proxy War relay worker self-test passed.");
   console.log(`selectedLegalActionId: ${parsed.action.id}`);
   console.log(`reason: ${parsed.reason}`);
 }

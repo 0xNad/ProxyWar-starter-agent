@@ -33,12 +33,12 @@ Usage:
 
 Default:
   --relay is the default. It uses Managed Agent Relay: your machine connects
-  outbound to ProxyWar, receives decision requests, calls Codex CLI,
+  outbound to Proxy War, receives decision requests, calls Codex CLI,
   Claude/Cowork, a custom command, or OpenRouter locally, then posts decisions
   back. No public local endpoint, no tunnel, and no inbound port are needed.
 
 Options:
-  --beta-url URL          ProxyWar beta URL. Default: https://beta.proxywar.xyz
+  --beta-url URL          Proxy War beta URL. Default: https://beta.proxywar.xyz
   --invite-code CODE     Log in, create a relay session, queue a match, and poll replay.
   --relay                Managed relay mode. Default and recommended.
   --http-agent-card      Advanced: expose /agent-card.md and /proxywar/decide.
@@ -57,7 +57,7 @@ What this does in relay mode:
   1. Checks git, Node.js 20+, npm, and curl.
   2. Clones or fast-forwards the public starter repo.
   3. Finds a working Codex CLI, Claude/Cowork, custom command, or OpenRouter backend.
-  4. Runs relay self-test before contacting ProxyWar.
+  4. Runs relay self-test before contacting Proxy War.
   5. Logs into beta, creates /api/agent-relay/sessions, starts the relay worker,
      queues a saved-agent match, then prints replay and feedback links.
 
@@ -473,7 +473,7 @@ login_beta() {
   local cookie_jar="$1"
   local body_file="$2"
   local status_code
-  log "Logging into ProxyWar beta"
+  log "Logging into Proxy War beta"
   status_code="$(curl -sS -L -c "$cookie_jar" -b "$cookie_jar" -o "$body_file" -w '%{http_code}' --data-urlencode "inviteCode=$INVITE_CODE" --data-urlencode "returnTo=/public" "${BETA_URL}/api/beta/login")"
   if [[ "$status_code" -lt 200 || "$status_code" -ge 400 ]]; then
     cat "$body_file" >&2 || true

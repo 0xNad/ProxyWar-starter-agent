@@ -1,7 +1,7 @@
 {
   "name": "proxywar-agent-starter",
   "version": "0.1.0",
-  "description": "LLM-backed external agent starter for ProxyWar matches.",
+  "description": "LLM-backed external agent starter for Proxy War matches.",
   "type": "module",
   "license": "AGPL-3.0-or-later",
   "repository": {

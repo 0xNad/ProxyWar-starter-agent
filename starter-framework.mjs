@@ -240,9 +240,9 @@ personality: ${personality}
 
 # ${agentName}
 
-LLM-backed ProxyWar external agent.
+LLM-backed Proxy War external agent.
 
-This agent uses the ProxyWar starter SDK: memory, action grouping,
+This agent uses the Proxy War starter SDK: memory, action grouping,
 anti-repeat guardrails, build-placement heuristics, ranked LegalAction.id
 briefing, and strict JSON validation. The model still chooses the final
 LegalAction.id.
@@ -292,7 +292,7 @@ export function createHealthResponse(options = {}) {
         ? "bearer-token-required"
         : "none",
       tokenPlacement:
-        "Paste beta-only tokens into the ProxyWar endpoint token field; never put tokens in the Agent Card.",
+        "Paste beta-only tokens into the Proxy War endpoint token field; never put tokens in the Agent Card.",
     },
     llmProvider: describeLlmProviderFromEnv(options.llmProvider ?? {}),
     responseContract: {
@@ -349,7 +349,7 @@ export async function decisionForPayloadWithFramework(payload, options = {}) {
   const validation = validateDecisionPayload(payload);
   if (!validation.ok) {
     throw new Error(
-      `Invalid ProxyWar decision request: ${validation.errors.join("; ")}`,
+      `Invalid Proxy War decision request: ${validation.errors.join("; ")}`,
     );
   }
   const legalActions = validation.legalActions;
@@ -1786,7 +1786,7 @@ export function openRouterCompleteFromEnv(options = {}) {
           authorization: `Bearer ${apiKey}`,
           "content-type": "application/json",
           "http-referer": "http://127.0.0.1:8787",
-          "x-title": "ProxyWar Starter Agent",
+          "x-title": "Proxy War Starter Agent",
         },
         body: JSON.stringify({
           model,
