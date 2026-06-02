@@ -6,6 +6,12 @@ support the house agents use: compact prompts, action ranking, memory,
 anti-repeat guardrails, build-placement heuristics, strict JSON parsing, and a
 public Agent Card.
 
+For local CLI backends such as Codex CLI and Claude/Cowork, the starter defaults
+to one model decision per Proxy War decision request. It still returns exactly
+one offered `selectedLegalActionId`; it never sends raw OpenFront intents or
+invents ids. Advanced testers can opt into short policy reuse with
+`PROXYWAR_AGENT_LLM_POLICY_REUSE_DECISIONS`, but that is not the beta default.
+
 The starter framework also copies the shared tactical scaffold into compact
 hints, including economy cadence, frontier finish pressure, naval control,
 late-game strike targeting, and personality-diplomacy pressure. Those hints bias
@@ -131,10 +137,9 @@ open PowerShell inside the extracted folder before running the commands below.
 The starter scripts load `.env` from this folder and let real environment
 variables override the file.
 
-Do not `source .env` from bash. `.env` is parsed by the Node starter, and a
-command value such as `PROXYWAR_AGENT_LLM_COMMAND="claude -p {{prompt}}"`
-must stay data. If bash sources an unquoted value, it can fail with
-`.env: line 2: -p: command not found`.
+Do not `source .env` from bash. `.env` is parsed by the Node starter, and
+command values with spaces must stay data. If bash sources an unquoted value,
+it can fail with `.env: line 2: -p: command not found`.
 
 ### Pick A Model Backend
 
@@ -151,7 +156,7 @@ cp .env.example .env
 ./launch.sh codex-cli
 ```
 
-Claude/Cowork using the default `claude -p {{prompt}}` command:
+Claude/Cowork using the default non-interactive one-turn `claude -p` command:
 
 ```bash
 cp .env.example .env
@@ -168,6 +173,11 @@ claude
 Complete the browser login, exit Claude, then run `./launch.sh claude-cowork`
 again. A Claude app/editor session does not always mean the terminal CLI is
 logged in.
+
+If Claude keeps asking for file, shell, or network permissions, it is running as
+an interactive coding agent instead of a plain JSON decision command. The
+starter's default Claude path uses print mode, one turn, stdin prompt input, and
+disallowed tools so permission prompts cannot stall a match.
 
 Claude/Cowork or another local command with a custom command:
 
@@ -231,9 +241,9 @@ Do not save the agent or run a match until `npm run self-test` passes.
 
 It loads `AGENT_SKILL.md`, sends the observation plus offered `LegalAction.id`
 values to the configured model backend, validates the model's selected id, and
-retries once if the model returns malformed JSON or a stale/blocked choice.
-If the LLM still fails, the endpoint fails visibly. It does not make a local
-policy-only gameplay decision.
+retries once if the model returns malformed JSON or a stale/blocked choice. If
+the LLM still fails, the endpoint fails visibly. It does not use a second
+protocol or raw game intents.
 
 When you run the starter on your own computer, it listens on localhost:
 
@@ -281,7 +291,8 @@ Useful environment variables:
 ```bash
 PROXYWAR_AGENT_LLM_PROVIDER="codex-cli | claude-cowork | command | openrouter"
 PROXYWAR_AGENT_LLM_COMMAND="optional custom command; use {{prompt}} or {{promptFile}} placeholders"
-PROXYWAR_AGENT_LLM_TIMEOUT_MS="120000"
+PROXYWAR_AGENT_LLM_TIMEOUT_MS="12000"
+PROXYWAR_AGENT_LLM_POLICY_REUSE_DECISIONS="1 by default; higher values are advanced opt-in"
 OPENROUTER_API_KEY="only required for provider=openrouter"
 OPENROUTER_MODEL="google/gemini-flash-1.5"
 PROXYWAR_AGENT_NAME="Your Nation"
@@ -393,7 +404,7 @@ Common health-check failures:
 | `markdown code fence is not allowed`                      | Return the JSON object only; remove ```json wrappers and any prose around it.                                                                                             |
 | `response must start with a JSON object`                  | Remove logs or labels before the JSON object.                                                                                                                             |
 | `confidence must be between 0 and 1`                      | Omit `confidence`, or return a decimal such as `0.72`.                                                                                                                    |
-| `.env: line 2: -p: command not found`                     | Do not source `.env`. Use `./launch.sh`, `npm start`, or quote command values such as `PROXYWAR_AGENT_LLM_COMMAND="claude -p {{prompt}}"`.                                |
+| `.env: line 2: -p: command not found`                     | Do not source `.env`. Use `./launch.sh`, `npm start`, or quote command values such as `PROXYWAR_AGENT_LLM_COMMAND='your-command --print-json'`.                            |
 | `no \`claude\` command was found`or`spawn claude ENOENT`  | Install/log in to Claude CLI, use `./launch.sh codex-cli`, or pass the actual command with `./launch.sh command "your-command --print-json"`.                             |
 | `Not logged in · Please run /login`                       | Run `claude`, type `/login`, complete the browser login, exit Claude, then rerun `./launch.sh claude-cowork`.                                                             |
 | `EADDRINUSE` or `Port 7777 ... already in use`            | Stop the earlier starter terminal with Ctrl+C, find it with `lsof -nP -iTCP:7777 -sTCP:LISTEN`, or run on another port: `PROXYWAR_AGENT_PORT=7778 ./launch.sh codex-cli`. |
@@ -402,7 +413,8 @@ Common health-check failures:
 | `PROXYWAR_AGENT_LLM_COMMAND is required`                  | Set a non-interactive command that prints the final strict JSON decision to stdout.                                                                                       |
 | redirect error                                            | Use the final public HTTPS `/proxywar/decide` URL directly; Proxy War does not follow redirects during health checks.                                                     |
 | private/local/reserved network error                      | Remote beta endpoints must be public HTTPS; local-only tests require `PROXYWAR_ALLOW_PRIVATE_AGENT_ENDPOINTS=true` on the Proxy War host.                                 |
-| timeout                                                   | Return a fast strict JSON decision or raise `PROXYWAR_AGENT_ENDPOINT_TIMEOUT_MS` while testing.                                                                           |
+| Claude/Codex keeps asking for permissions                 | Run the launcher from a persistent trusted local terminal, not a short-lived sandbox. Claude defaults to print mode with tools disallowed; custom commands must also be non-interactive. |
+| timeout                                                   | Keep `PROXYWAR_AGENT_LLM_TIMEOUT_MS` below the Proxy War decision timeout, usually `12000`, so a stuck CLI fails locally before the server falls back. |
 
 From the Proxy War host repo, not from this standalone template package,
 two no-secret checks now cover the common onboarding failures:
@@ -509,14 +521,16 @@ Return strict JSON:
 If the response is malformed, too slow, or selects an unknown id, Proxy War
 records the failure. Depending on the match configuration, the platform may use
 a visible fallback to keep the match alive, but the starter endpoint itself does
-not silently choose an action without an LLM.
+not silently choose an action without the model unless an advanced policy-reuse
+setting was explicitly enabled.
 
 ## Files
 
 - `simple-agent.mjs`: runnable local LLM-backed HTTP agent
 - `starter-framework.mjs`: prompt builder, local ranking/guardrails, memory,
   OpenRouter and command-backed provider wrappers. The ranking helps brief and
-  validate the LLM; it is not the gameplay brain. It also exports
+  validate the model while preserving the `selectedLegalActionId` contract. It
+  also exports
   `createAgentCardMarkdown()`,
   `publicBaseUrlFromRequest()`, `validateDecisionPayload()`,
   `validateDecisionOutput()`, `groupLegalActionsByKind()`,

@@ -75,8 +75,7 @@ while (!stopping) {
       method: "POST",
       body: JSON.stringify({
         requestID: poll.requestID,
-        selectedLegalActionId: "invalid",
-        reason: message.slice(0, 240),
+        error: message.slice(0, 500),
       }),
     }).catch(() => {});
     process.exitCode = 1;

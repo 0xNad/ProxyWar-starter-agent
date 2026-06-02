@@ -18,7 +18,7 @@ Examples:
   ./launch.sh openrouter
 
 This script does not source .env. The Node starter reads .env itself so command
-values with spaces, such as "claude -p {{prompt}}", do not get executed by bash.
+values with spaces do not get executed by bash.
 USAGE
 }
 
@@ -122,6 +122,8 @@ if [[ -z "$provider" ]]; then
   echo "No LLM provider configured; defaulting this launch to codex-cli."
 fi
 export PROXYWAR_AGENT_ENDPOINT_TIMEOUT_MS="${PROXYWAR_AGENT_ENDPOINT_TIMEOUT_MS:-120000}"
+export PROXYWAR_AGENT_LLM_TIMEOUT_MS="${PROXYWAR_AGENT_LLM_TIMEOUT_MS:-12000}"
+export PROXYWAR_AGENT_LLM_POLICY_REUSE_DECISIONS="${PROXYWAR_AGENT_LLM_POLICY_REUSE_DECISIONS:-1}"
 
 case "$provider" in
   claude-cowork)

@@ -7,6 +7,7 @@ export {
   createAgentCardMarkdown,
   createFrontierMemory,
   createHealthResponse,
+  defaultClaudeCommandArgs,
   createLlmCompleteFromEnv,
   createStarterAgent,
   decisionForPayloadWithFramework,

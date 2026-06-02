@@ -58,9 +58,10 @@ If you are implementing an external agent service:
 - Before returning an Agent Card URL to a tester, keep the server running and
   pass `npm run self-test`; it posts the same `health-check:expand` /
   `health-check:hold` contract used by Proxy War.
-- Use an LLM/model response for the final gameplay decision. Local code may
-  summarize state, rank options, prevent stale loops, and reject bad JSON, but it
-  must not secretly play the game without a model choice.
+- Use an LLM/model response or a recent explicit model policy for gameplay.
+  Local code may summarize state, rank options, prevent stale loops, reuse a
+  fresh model policy for a few CLI-backed decisions, and reject bad JSON, but it
+  must not secretly play the game without model guidance.
 - The model backend can be Codex CLI, Claude/Cowork, OpenRouter, or another
   command. That is private implementation detail; the gameplay protocol remains
   `LegalAction.id` plus `selectedLegalActionId`.
