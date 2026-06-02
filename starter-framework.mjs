@@ -2137,7 +2137,11 @@ function claudeCommandCompleteFromEnv(provider, options = {}) {
     (provider === "claude-cowork" ? "claude" : "claude");
   return commandComplete({
     command,
-    args: defaultClaudeCommandArgs(),
+    args: defaultClaudeCommandArgs(
+      options.model ??
+        process.env.PROXYWAR_AGENT_LLM_MODEL ??
+        process.env.CLAUDE_MODEL,
+    ),
     timeoutMs:
       options.timeoutMs ??
       process.env.PROXYWAR_AGENT_LLM_TIMEOUT_MS ??
@@ -2146,14 +2150,19 @@ function claudeCommandCompleteFromEnv(provider, options = {}) {
   });
 }
 
-export function defaultClaudeCommandArgs() {
-  return [
+export function defaultClaudeCommandArgs(model = "") {
+  const args = [
     "-p",
     "--max-turns",
     "1",
     "--disallowedTools",
     "Bash,Edit,MultiEdit,Write,Read,WebFetch,WebSearch",
   ];
+  const normalizedModel = String(model ?? "").trim();
+  if (normalizedModel !== "") {
+    args.push("--model", normalizedModel);
+  }
+  return args;
 }
 
 function normalizeLlmProvider(value) {

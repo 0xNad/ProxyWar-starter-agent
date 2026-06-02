@@ -179,6 +179,11 @@ an interactive coding agent instead of a plain JSON decision command. The
 starter's default Claude path uses print mode, one turn, stdin prompt input, and
 disallowed tools so permission prompts cannot stall a match.
 
+To select a specific Claude model without losing those safety flags, set
+`PROXYWAR_AGENT_LLM_MODEL` and keep provider `claude-cowork`. Do not replace the
+default Claude command unless the replacement is also non-interactive and
+tool-disabled.
+
 Claude/Cowork or another local command with a custom command:
 
 ```bash
@@ -291,6 +296,7 @@ Useful environment variables:
 ```bash
 PROXYWAR_AGENT_LLM_PROVIDER="codex-cli | claude-cowork | command | openrouter"
 PROXYWAR_AGENT_LLM_COMMAND="optional custom command; use {{prompt}} or {{promptFile}} placeholders"
+PROXYWAR_AGENT_LLM_MODEL="optional model for codex-cli, claude-cowork, or openrouter"
 PROXYWAR_AGENT_LLM_TIMEOUT_MS="12000"
 PROXYWAR_AGENT_LLM_POLICY_REUSE_DECISIONS="1 by default; higher values are advanced opt-in"
 OPENROUTER_API_KEY="only required for provider=openrouter"
