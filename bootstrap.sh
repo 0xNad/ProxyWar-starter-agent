@@ -461,6 +461,18 @@ if (value !== undefined && value !== null) process.stdout.write(String(value));
 NODE
 }
 
+json_object_field() {
+  local file="$1"
+  local field="$2"
+  node - "$file" "$field" <<'NODE'
+const fs = require("node:fs");
+let value = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+for (const part of process.argv[3].split(".")) value = value?.[part];
+if (value === undefined || value === null || typeof value !== "object") process.exit(1);
+process.stdout.write(JSON.stringify(value));
+NODE
+}
+
 join_url() {
   local base="$1"
   local path="$2"
@@ -483,6 +495,42 @@ login_beta() {
   fi
 }
 
+relay_session_active_in_file() {
+  local file="$1"
+  local session_id="$2"
+  node - "$file" "$session_id" <<'NODE'
+const fs = require("node:fs");
+const body = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+const sessionID = process.argv[3];
+const results = Array.isArray(body.results) ? body.results : [];
+const active = results.some((item) =>
+  item &&
+  item.ok === true &&
+  typeof item.endpoint === "string" &&
+  item.endpoint.includes(sessionID)
+);
+process.exit(active ? 0 : 1);
+NODE
+}
+
+wait_for_relay_session_active() {
+  local cookie_jar="$1"
+  local body_file="$2"
+  local session_id="$3"
+  local status_code
+  log "Waiting for relay worker to connect"
+  for _ in $(seq 1 60); do
+    status_code="$(curl -sS -b "$cookie_jar" -X POST -o "$body_file" -w '%{http_code}' "${BETA_URL}/api/tester-dashboard/endpoint-health")"
+    if [[ "$status_code" -ge 200 && "$status_code" -lt 300 ]] && relay_session_active_in_file "$body_file" "$session_id"; then
+      log "Relay worker is active"
+      return 0
+    fi
+    sleep 1
+  done
+  cat "$body_file" >&2 || true
+  return 1
+}
+
 login_create_relay_and_run() {
   if [[ -z "$INVITE_CODE" ]]; then
     fail "Managed relay beta play requires --invite-code. Rerun with --invite-code \"...\"."
@@ -491,7 +539,7 @@ login_create_relay_and_run() {
   cookie_jar="$(mktemp)"
   body_file="$(mktemp)"
   login_beta "$cookie_jar" "$body_file"
-  log "Creating Managed Agent Relay session and queueing a bounded match"
+  log "Creating Managed Agent Relay session"
   relay_json="$(SELECTED_PROVIDER="$selected_provider" node - <<'NODE'
 process.stdout.write(JSON.stringify({
   agentName: process.env.PROXYWAR_AGENT_NAME || "Relay Frontier",
@@ -500,6 +548,7 @@ process.stdout.write(JSON.stringify({
   personality: "Managed relay starter agent. Local model stays on tester machine.",
   policyChangelog: `Connected through Managed Agent Relay with ${process.env.SELECTED_PROVIDER || "local CLI"}.`,
   timeoutMs: Number(process.env.PROXYWAR_AGENT_ENDPOINT_TIMEOUT_MS || 120000),
+  queueMatch: false,
 }));
 NODE
 )"
@@ -509,15 +558,15 @@ NODE
     fail "Managed relay session setup failed with HTTP $status_code."
   fi
 
-  local session_id session_token poll_url decisions_url job_status_path job_url
+  local session_id session_token poll_url decisions_url job_request job_status_path job_url
   session_id="$(json_field "$body_file" "relay.sessionID")"
   session_token="$(json_field "$body_file" "relay.sessionToken")"
   poll_url="$(json_field "$body_file" "relay.pollUrl")"
   decisions_url="$(json_field "$body_file" "relay.decisionsUrl")"
-  job_status_path="$(json_field "$body_file" "jobStatusUrl")"
-  if [[ -z "$session_id" || -z "$session_token" || -z "$job_status_path" ]]; then
+  job_request="$(json_object_field "$body_file" "jobRequest")"
+  if [[ -z "$session_id" || -z "$session_token" || -z "$job_request" ]]; then
     cat "$body_file" >&2 || true
-    fail "Managed relay setup did not return relay session and jobStatusUrl."
+    fail "Managed relay setup did not return relay session and jobRequest."
   fi
 
   relay_worker_log="${TMPDIR:-/tmp}/proxywar-relay-worker.$$.log"
@@ -534,7 +583,18 @@ NODE
     tail -80 "$relay_worker_log" >&2 || true
     fail "Relay worker exited before connecting. Fix the provider error above and rerun."
   fi
+  if ! wait_for_relay_session_active "$cookie_jar" "$body_file" "$session_id"; then
+    tail -80 "$relay_worker_log" >&2 || true
+    fail "Relay worker did not become active. Keep the terminal open, fix provider errors, and rerun."
+  fi
 
+  log "Queueing winner-required beta match"
+  status_code="$(curl -sS -b "$cookie_jar" -H 'content-type: application/json' -o "$body_file" -w '%{http_code}' --data "$job_request" "${BETA_URL}/api/jobs")"
+  if [[ "$status_code" -lt 200 || "$status_code" -ge 300 ]]; then
+    cat "$body_file" >&2 || true
+    fail "Match queue failed with HTTP $status_code."
+  fi
+  job_status_path="/api/jobs/$(json_field "$body_file" "jobID")"
   job_url="$(join_url "$BETA_URL" "$job_status_path")"
   log "Match queued. Polling job: $job_url"
   local started_at last_status
