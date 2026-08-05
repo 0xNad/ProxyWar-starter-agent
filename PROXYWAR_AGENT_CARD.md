@@ -1,3 +1,5 @@
+> **RETIRED (June 2026 private beta).** This file describes endpoints that are no longer served. Current league starter: https://github.com/0xNad/proxywar-coworld-starter
+
 ---
 agentName: Remote Frontier
 profile: opportunistic
